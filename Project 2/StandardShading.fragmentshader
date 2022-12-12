@@ -1,0 +1,76 @@
+#version 330 core
+
+// Interpolated values from the vertex shaders
+in vec4 vs_vertexColor;
+in vec3 Position_worldspace;
+in vec3 Normal_cameraspace;
+in vec3 EyeDirection_cameraspace;
+in vec3 LightDirection_cameraspace;
+in vec3 Light1Direction_cameraspace;
+in vec3 Light2Direction_cameraspace;
+
+// Ouput data
+out vec3 color;
+
+// Values that stay constant for the whole mesh.
+uniform mat4 MV;
+uniform vec3 LightPosition_worldspace;
+uniform vec3 Light1Position_worldspace;
+uniform vec3 Light2Position_worldspace;
+
+// TL
+// ATTN: Refer to https://learnopengl.com/Lighting/Colors and https://learnopengl.com/Lighting/Basic-Lighting
+// to familiarize yourself with implementing basic lighting model in OpenGL shaders
+
+void main() {
+
+// Refer to http://www.opengl-tutorial.org/beginners-tutorials/tutorial-8-basic-shading/
+
+        vec3 LightColor = vec3(1, 1, 1);
+        vec3 Light1Color = vec3(1, 1, 1);
+        vec3 Light2Color = vec3(1, 1, 1);
+        float LightPower = 150.0f;
+        float Light1Power = 300.0f;
+        float Light2Power = 300.0f;
+
+        vec3 MaterialDiffuseColor = vec3(0.05, 0.05, 0.05) * vs_vertexColor.rgb;
+        vec3 MaterialAmbientColor = vec3(0.8, 0.8, 0.8) * vs_vertexColor.rgb;
+        vec3 MaterialSpecularColor = vec3(0.1, 0.1, 0.1) * vs_vertexColor.rgb;
+
+        float distance = length(LightPosition_worldspace - Position_worldspace);
+        float distance1 = length(Light1Position_worldspace - Position_worldspace);
+        float distance2 = length(Light2Position_worldspace - Position_worldspace);
+
+        vec3 n = normalize(Normal_cameraspace);
+	    vec3 l = normalize(LightDirection_cameraspace);
+        vec3 l1 = normalize(Light1Direction_cameraspace);
+        vec3 l2 = normalize(Light2Direction_cameraspace);
+
+        float cosTheta = clamp(dot(n, l), 0, 1);
+        float cosTheta1 = clamp(dot(n, l1), 0, 1);
+        float cosTheta2 = clamp(dot(n, l2), 0, 1);
+
+        vec3 E = normalize(EyeDirection_cameraspace);
+	
+	    vec3 R = reflect(-l, n);
+        vec3 R1 = reflect(-l1, n);
+        vec3 R2 = reflect(-l2, n);
+
+    	float cosAlpha = clamp(dot(E, R), 0, 1);
+        float cosAlpha1 = clamp(dot(E, R1), 0, 1);
+        float cosAlpha2 = clamp(dot(E, R2), 0, 1);
+
+
+	    color = 
+		// Ambient : simulates indirect lighting
+		MaterialAmbientColor +
+		// Diffuse : "color" of the object
+                MaterialDiffuseColor * LightColor * LightPower * cosTheta / (distance * distance) +
+                MaterialDiffuseColor * Light1Color * Light1Power * cosTheta1 / (distance1 * distance1) +
+                MaterialDiffuseColor * Light2Color * Light2Power * cosTheta2 / (distance2 * distance2) +
+		// Specular : reflective highlight, like a mirror
+                MaterialSpecularColor * LightColor * LightPower * pow(cosAlpha, 64) / (distance * distance) +
+                MaterialSpecularColor * Light1Color * Light1Power * pow(cosAlpha1, 64) / (distance1 * distance1) +
+                MaterialSpecularColor * Light2Color * Light2Power * pow(cosAlpha2, 64) / (distance2 * distance2);
+
+}
